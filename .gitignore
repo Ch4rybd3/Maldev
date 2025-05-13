@@ -176,6 +176,5 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/python
 
 WannaSwim\build\
-WannaSwim\dist\
 WannaSwim\env_setup.spec
 WannaSwim\payload.spec
