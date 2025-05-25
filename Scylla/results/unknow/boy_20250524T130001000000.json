@@ -1,0 +1,14 @@
+{
+  "hostname": "boy",
+  "timestamp": "2025-05-24T13:00:01Z",
+  "payload": {
+    "key": "value",
+    "data": [
+      1,
+      2,
+      3
+    ]
+  },
+  "auth_key": "1887509308309418244689469339184520403722",
+  "malware": "testmalware"
+}
