@@ -1,0 +1,14 @@
+{
+  "hostname": "test-machine",
+  "timestamp": "2025-05-23T12:00:00Z",
+  "payload": {
+    "key": "value",
+    "data": [
+      1,
+      2,
+      3
+    ]
+  },
+  "auth_key": "4635749326579220869218518754801909255745",
+  "malware": "testmalware"
+}
