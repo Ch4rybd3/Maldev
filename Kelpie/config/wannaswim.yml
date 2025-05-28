@@ -1,6 +1,7 @@
 name: WannaSwim
 malware_type: Ransomware
 lang: Python
+template_file: WannaSwim.yml
 auth_key: 4635749326579220869218518754801909255745
 description: |
   WannaSwim is my own version of Wannacry, It has a working killswitch which is actually harder to detect because the URL is randomly generated and it double check using a connexion to google.com.

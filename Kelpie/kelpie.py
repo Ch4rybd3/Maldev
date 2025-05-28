@@ -1,7 +1,8 @@
 import os
 import yaml
 import questionary
-
+import base64
+from engines.builder import yaml_to_python_script
 
 CONFIG_DIR = "Kelpie/config"
 
@@ -11,7 +12,7 @@ def load_all_configs():
     for file in os.listdir(CONFIG_DIR):
         if file.endswith(".yml"):
             path = os.path.join(CONFIG_DIR, file)
-            with open(path, "r") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
                 data["__filename__"] = file  # garder le nom du fichier
                 configs.append(data)
@@ -52,10 +53,10 @@ malware_type = questionary.select(
     choices=get_malware_types(all_configs)
 ).ask()
 
-# Étape 2 - Filtres les payloads disponibles
+# Étape 2 - Filtrer les payloads disponibles
 filtered = [c for c in all_configs if c['malware_type'] == malware_type]
 
-# Step 3 - Select a payload and confirm
+# Step 3 - Sélectionner un payload
 while True:
     payload = questionary.select(
         "Select the base payload",
@@ -74,14 +75,19 @@ while True:
     ).ask()
 
     if confirm:
-        break  # On sort de la boucle si l'utilisateur confirme
-    if not confirm:
-        print("\nReturning to payload selection...\n")
+        break
+    print("\nReturning to payload selection...\n")
 
-# Étape 6 - Saisie des champs spécifiques (remplace c2_url statique)
+# Vérification de la clé template_file
+template_file_name = selected_payload.get("template_file")
+if not template_file_name:
+    print("[!] Erreur : Le champ 'template_file' est manquant dans la configuration.")
+    exit(1)
+
+# Étape 6 - Saisie des champs spécifiques
 specific_values = ask_specific_features(selected_payload.get("specific_feature", {}))
 
-# Étape 6 - Features disponibles
+# Étape 7 - Sélection des features
 features = questionary.checkbox(
     "Select features",
     choices=selected_payload.get("available_features", [])
@@ -95,3 +101,23 @@ print(f"- Features    : {features}")
 print("- Specific Configuration:")
 for key, val in specific_values.items():
     print(f"  - {key}: {val}")
+
+# Préparer les remplacements
+replacements = {}
+
+# Remplacements dynamiques des champs spécifiques
+for key, val in specific_values.items():
+    placeholder = f"{{{{{key}}}}}"  # ex: {{c2_url}}
+    replacements[placeholder] = str(val)
+
+# Gestion de la clé RSA si nécessaire
+template_path = f"Kelpie/templates/{template_file_name}"
+
+# Définir les chemins finaux
+output_file = f"Kelpie/malwares/source_code/{selected_payload['name'].lower()}.py"
+
+# Générer le fichier à partir du template
+yaml_to_python_script(template_path, output_file, replacements)
+
+print(f"\n✅ Payload '{selected_payload['name']}' généré avec succès.")
+print(f"📁 Fichier : {output_file}")
