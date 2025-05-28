@@ -20,7 +20,7 @@ specific_feature:
     label: "Targeted Folder"
     description: "The folder containing fake documents to be encrypted."
     type: "text"
-    default: "C:\\Users\\XXX\\Documents\\fake_env_Documents"
+    default: "C:/Users/XXX/Documents/fake_env_Documents"
   rsa_key_b64:
     label: "RSA public key in base64"
     description: "the RSA public key encoded in base64"
