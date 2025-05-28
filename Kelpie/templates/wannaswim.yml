@@ -109,7 +109,7 @@ bloc_send_aes_key_to_c2: |
 
 bloc_load_rsa_public_key: |
   def load_rsa_public_key():
-    b64_key = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnAB7GQ1uawa9iwN0KJjOo4NLfe6eda7MBFb41FY1/siCx0rQ9UYMrmoAl3YHyxY2X1NbJDEkE5U96warIgk6yukTwEsMC9vzsYTgbfIlXkHVBFiB+4XK6cFMo+syxWziqLclWlYRpqWaPiBZAKIuHptXUUT60b5VBZM1cKk6d5E5ASkGBm30iANIhcBG6YjWfn/MdgP4HcHmUrG9NmCaaosXiQxMMcFDBm8ASFSBAfER3jGmNiMYR0mVbBo6wBWAXXOLJiJiRaPPgH/wJ3S8/2SwexNHKWwhZ1FPvZ2E+DtVcSUi1eKBCyl9E0mtq9IjMD1nm+y9f90Lsmrq8h63fwIDAQAB"
+    b64_key = "{{rsa_key_b64}}"
     der_key = base64.b64decode(b64_key)
     return RSA.import_key(der_key)
 
