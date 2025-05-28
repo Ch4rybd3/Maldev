@@ -1,4 +1,29 @@
-Name: WannaSwim
-Language: Python
-Auth_Key: 4635749326579220869218518754801909255745
-C2_URL: https://X.X.X.X/page
+name: WannaSwim
+malware_type: Ransomware
+lang: Python
+auth_key: 4635749326579220869218518754801909255745
+description: |
+  WannaSwim is my own version of Wannacry, It has a working killswitch which is actually harder to detect because the URL is randomly generated and it double check using a connexion to google.com.
+  If the workstation can connect to a random URL or can't connect to google.com, it means that it's running in a sandbox and shut itself down to prevent analysis.
+  It encrypt data in a specific folder, if it does not find this folder, it shut itself down to prevent unwanted damages.
+  It encrypt the files using AES, and then encrypt it using RSA and send the key to a C2 with some metadata to be able to identify which key goes to which workstation.
+  It's not very discreet, but for some reasons, SentinelOne does not seems to see it acting weird.
+
+specific_feature:
+  c2_url:
+    label: "C2 Server URL"
+    description: "The URL where the infected host should send its RSA encrypted AES key and metadata."
+    type: "text"
+    default: "https://example.com/api"
+  folder_path:
+    label: "Targeted Folder"
+    description: "The folder containing fake documents to be encrypted."
+    type: "text"
+    default: "C:\\Users\\XXX\\Documents\\fake_env_Documents"
+
+available_features:
+- metamorphic-bloc_swap
+- metamorphic-dead_code
+- metamorphic-noop
+- metamorphic-rename_var
+- metamorphic-string_mutation

