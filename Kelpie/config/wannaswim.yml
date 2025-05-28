@@ -20,6 +20,11 @@ specific_feature:
     description: "The folder containing fake documents to be encrypted."
     type: "text"
     default: "C:\\Users\\XXX\\Documents\\fake_env_Documents"
+  rsa_key_b64:
+    label: "RSA public key in base64"
+    description: "the RSA public key encoded in base64"
+    type: "text"
+    default: "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnAB7GQ1uawa9iwN0KJjOo4NLfe6eda7MBFb41FY1/siCx0rQ9UYMrmoAl3YHyxY2X1NbJDEkE5U96warIgk6yukTwEsMC9vzsYTgbfIlXkHVBFiB+4XK6cFMo+syxWziqLclWlYRpqWaPiBZAKIuHptXUUT60b5VBZM1cKk6d5E5ASkGBm30iANIhcBG6YjWfn/MdgP4HcHmUrG9NmCaaosXiQxMMcFDBm8ASFSBAfER3jGmNiMYR0mVbBo6wBWAXXOLJiJiRaPPgH/wJ3S8/2SwexNHKWwhZ1FPvZ2E+DtVcSUi1eKBCyl9E0mtq9IjMD1nm+y9f90Lsmrq8h63fwIDAQAB"
 
 available_features:
 - metamorphic-bloc_swap

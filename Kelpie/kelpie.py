@@ -2,6 +2,7 @@ import os
 import yaml
 import questionary
 
+
 CONFIG_DIR = "Kelpie/config"
 
 # Charger tous les fichiers YAML
