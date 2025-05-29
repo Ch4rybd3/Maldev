@@ -44,3 +44,6 @@ A good tool when you want to hide what you did
 
 ## Limpet
 Limpet is the functionnality that aim to achieve persistance on the endpoint, it try different methods and make sure that it's as hard as possible to remove (Just like real limpets after all)
+
+## Plankton
+Plankton is a deadcode generator, it's generate a lot of deadcode that does nothing, but decrease readability and helps getting metamorphic results
