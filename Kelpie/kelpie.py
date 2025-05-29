@@ -1,123 +1,76 @@
 import os
+import sys
 import yaml
+import re
 import questionary
-import base64
-from engines.builder import yaml_to_python_script
+from jinja2 import Template
 
-CONFIG_DIR = "Kelpie/config"
+TEMPLATE_DIR = "Kelpie/templates/payloads"
+DIST_DIR = "Kelpie/malwares/dist"
 
-# Charger tous les fichiers YAML
-def load_all_configs():
-    configs = []
-    for file in os.listdir(CONFIG_DIR):
-        if file.endswith(".yml"):
-            path = os.path.join(CONFIG_DIR, file)
-            with open(path, "r", encoding="utf-8") as f:
-                data = yaml.safe_load(f)
-                data["__filename__"] = file  # garder le nom du fichier
-                configs.append(data)
-    return configs
+# --- Fonction pour extraire les métadonnées YAML d'un template Jinja2 ---
+def extract_metadata_from_template(path: str) -> dict:
+    with open(path, 'r', encoding='utf-8') as f:
+        content = f.read()
 
-# Organiser par type
-def get_malware_types(configs):
-    return sorted(set(conf['malware_type'] for conf in configs))
+    match = re.search(r'{#---(.*?)---#}', content, re.DOTALL)
+    if not match:
+        raise ValueError("Aucun bloc de métadonnées YAML trouvé dans le template.")
 
-# Poser dynamiquement les questions pour les specific_feature
-def ask_specific_features(specific_features):
-    user_answers = {}
-    for key, meta in specific_features.items():
-        label = f"{meta.get('label', key)}\n{meta.get('description', '')}"
+    yaml_block = match.group(1)
+    metadata = yaml.safe_load(yaml_block)
+    return metadata
 
-        if meta["type"] == "text":
-            user_answers[key] = questionary.text(
-                label,
-                default=str(meta.get("default", ""))
-            ).ask()
+# --- Fonction pour afficher la liste des payloads disponibles ---
+def list_payloads():
+    payloads = []
+    for file in os.listdir(TEMPLATE_DIR):
+        if file.endswith(".j2"):
+            payloads.append(file)
+    return payloads
 
-        elif meta["type"] == "boolean":
-            user_answers[key] = questionary.confirm(
-                label,
-                default=bool(meta.get("default", False))
-            ).ask()
+# --- Fonction principale ---
+def main():
+    print("\n🚀 Bienvenue dans Kelpie - Générateur de payloads personnalisés\n")
 
-        # Ajouter ici d'autres types si nécessaire
+    # Sélection du template
+    payload_files = list_payloads()
+    if not payload_files:
+        print("Aucun template trouvé dans le dossier templates.")
+        sys.exit(1)
 
-    return user_answers
-
-# === Main ===
-all_configs = load_all_configs()
-
-# Étape 1 - Choix du type de malware
-malware_type = questionary.select(
-    "Select the malware type",
-    choices=get_malware_types(all_configs)
-).ask()
-
-# Étape 2 - Filtrer les payloads disponibles
-filtered = [c for c in all_configs if c['malware_type'] == malware_type]
-
-# Step 3 - Sélectionner un payload
-while True:
-    payload = questionary.select(
-        "Select the base payload",
-        choices=[f"{conf['name']} ({conf['lang']})" for conf in filtered]
+    payload_choice = questionary.select(
+        "📦 Choisissez un payload :",
+        choices=payload_files
     ).ask()
 
-    # Retrouver la config associée
-    selected_payload = next(conf for conf in filtered if conf['name'] in payload)
+    template_path = os.path.join(TEMPLATE_DIR, payload_choice)
+    metadata = extract_metadata_from_template(template_path)
 
-    # Étape 4 - Affiche la description
-    print(f"\nDescription:\n{selected_payload['description']}")
+    print(f"\n🔍 Chargement du template: {metadata['name']} ({metadata['malware_type']})")
 
-    # Étape 5 - Confirmation
-    confirm = questionary.confirm(
-        "Do you want to continue with this payload?", default=True
-    ).ask()
+    # Collecte des variables spécifiques (si présentes dans le template)
+    variables = {}
+    for key in re.findall(r"{{\s*(\w+)\s*}}", open(template_path, encoding='utf-8').read()):
+        if key not in variables:
+            response = questionary.text(f"Entrez une valeur pour '{key}':").ask()
+            variables[key] = response
 
-    if confirm:
-        break
-    print("\nReturning to payload selection...\n")
+    # Génération du fichier final
+    with open(template_path, encoding='utf-8') as f:
+        template_content = f.read()
+    template = Template(template_content)
+    rendered_code = template.render(**variables)
 
-# Vérification de la clé template_file
-template_file_name = selected_payload.get("template_file")
-if not template_file_name:
-    print("[!] Erreur : Le champ 'template_file' est manquant dans la configuration.")
-    exit(1)
+    output_filename = metadata['name'].lower().replace(" ", "_") + ".py"
+    output_path = os.path.join(DIST_DIR, output_filename)
 
-# Étape 6 - Saisie des champs spécifiques
-specific_values = ask_specific_features(selected_payload.get("specific_feature", {}))
+    os.makedirs(DIST_DIR, exist_ok=True)
+    with open(output_path, "w", encoding='utf-8') as f:
+        f.write(rendered_code)
 
-# Étape 7 - Sélection des features
-features = questionary.checkbox(
-    "Select features",
-    choices=selected_payload.get("available_features", [])
-).ask()
+    print(f"\n✅ Payload généré avec succès : {output_path}\n")
 
-# Résumé
-print("\nRésumé:")
-print(f"- Payload     : {selected_payload['name']}")
-print(f"- Langage     : {selected_payload['lang']}")
-print(f"- Features    : {features}")
-print("- Specific Configuration:")
-for key, val in specific_values.items():
-    print(f"  - {key}: {val}")
 
-# Préparer les remplacements
-replacements = {}
-
-# Remplacements dynamiques des champs spécifiques
-for key, val in specific_values.items():
-    placeholder = f"{{{{{key}}}}}"  # ex: {{c2_url}}
-    replacements[placeholder] = str(val)
-
-# Gestion de la clé RSA si nécessaire
-template_path = f"Kelpie/templates/{template_file_name}"
-
-# Définir les chemins finaux
-output_file = f"Kelpie/malwares/source_code/{selected_payload['name'].lower()}.py"
-
-# Générer le fichier à partir du template
-yaml_to_python_script(template_path, output_file, replacements)
-
-print(f"\n✅ Payload '{selected_payload['name']}' généré avec succès.")
-print(f"📁 Fichier : {output_file}")
+if __name__ == "__main__":
+    main()
