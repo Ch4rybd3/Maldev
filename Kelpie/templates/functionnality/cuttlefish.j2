@@ -1,11 +1,12 @@
-# --- METADATA ---
-# name: Cuttlefish
-# functionnality: killswitch
-# lang: Python
-# description: |
-#   Cuttlefish is a really good killswitch that aim to evade sandbox detection.
-#   I tries to connect to a random domain, if the connection is a HTTP200, then it means we're in a sandbox because they tend to make all request go 200 to analyse behavior, but seing this, the killswitch is set to True and nothing happen
-#   If the first condition is OK then it moves to the second which is a simple connection to google.com, it it does not work, then it means we're in an isolated environnement and it shut itself down to prevent analysis
+{#---
+name: CuttleFish
+functionnality_type: Killswitch
+lang: python
+description: >
+    CuttleFish is a killswitch payload that checks if the malware is running in a controlled environment.
+    It attempts to connect to a random URL and also checks connectivity to Google.
+    If both checks fail, it returns True, indicating a killswitch condition.
+---#}
 
 # --- PAYLOAD CODE ---
 def killswitch():
