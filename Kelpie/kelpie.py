@@ -1,6 +1,8 @@
 import yaml
 import os
+import platform
 from jinja2 import Environment, FileSystemLoader
+from tabulate import tabulate  # pip install tabulate
 
 class KelpieCLI:
     def __init__(self):
@@ -9,9 +11,46 @@ class KelpieCLI:
         self.config = {}
         print(f"[i] {len(self.payloads)} payload(s) chargés depuis le dossier config.")
 
+    def clear_console(self):
+        if platform.system() == "Windows":
+            os.system("cls")
+        else:
+            os.system("clear")
+
+    def truncate_str(self, s, max_len=30):
+        if len(s) > max_len:
+            return s[:max_len] + "..."
+        return s
+
+    def print_options_table(self):
+        if not self.selected_payload:
+            print("[Aucun payload sélectionné]")
+            return
+        headers = ["Nom", "Type", "Description", "Valeur"]
+        rows = []
+        for opt in self.selected_payload["features"]:
+            name = opt.get("name", "")
+            typ = opt.get("type", "")
+            desc = opt.get("description", "")
+            val = self.config.get(name, "")
+            val = self.truncate_str(str(val), 40)  # Limite à 40 caractères par ex
+            rows.append([name, typ, desc, val])
+        print(tabulate(rows, headers=headers, tablefmt="grid"))
+
+
     def run(self):
         while True:
-            cmd = input("kelpie > ").strip()
+            self.clear_console()
+            # Affiche tableau options en haut
+            self.print_options_table()
+
+            # Affiche prompt avec ou sans payload sélectionné
+            prompt = "[kelpie]"
+            if self.selected_payload:
+                prompt += f" - [{self.selected_payload['name']}]"
+            prompt += " > "
+            
+            cmd = input(prompt).strip()
             if cmd in ("exit", "quit"):
                 break
             self.handle_command(cmd)
@@ -19,21 +58,25 @@ class KelpieCLI:
     def handle_command(self, cmd):
         if cmd == "list":
             self.list_payloads()
+            input("\nAppuyez sur Entrée pour continuer...")
         elif cmd.startswith("use "):
             name = cmd.split(" ", 1)[1]
             self.select_payload(name)
         elif cmd == "show options":
             self.show_options()
+            input("\nAppuyez sur Entrée pour continuer...")
         elif cmd.startswith("set"):
-            # Extraire la partie après 'set'
             args = cmd[3:].strip()
             self.set_option(args)
         elif cmd == "generate":
             self.generate_payload()
+            input("\nAppuyez sur Entrée pour continuer...")
         else:
             print("Commande inconnue.")
+            input("\nAppuyez sur Entrée pour continuer...")
 
     def list_payloads(self):
+        print("Payloads disponibles :")
         for payload in self.payloads:
             print(f"- {payload['name']} ({payload['malware_type']})")
 
@@ -43,13 +86,16 @@ class KelpieCLI:
                 self.selected_payload = p
                 self.config = {opt["name"]: opt.get("default", "") for opt in p["features"]}
                 print(f"Payload '{name}' sélectionné.")
+                input("\nAppuyez sur Entrée pour continuer...")
                 return
         print("Payload non trouvé.")
+        input("\nAppuyez sur Entrée pour continuer...")
 
     def show_options(self):
         if not self.selected_payload:
             print("Aucun payload sélectionné.")
             return
+        print("Options du payload :")
         for opt in self.selected_payload["features"]:
             value = self.config.get(opt["name"], "")
             print(f"{opt['name']} ({opt['type']}): {value}")
@@ -57,28 +103,33 @@ class KelpieCLI:
     def set_option(self, args=None):
         if not self.selected_payload:
             print("Aucun payload sélectionné.")
+            input("\nAppuyez sur Entrée pour continuer...")
             return
         
         if args:
             parts = args.split(" ", 1)
             if len(parts) != 2:
                 print("Usage : set <option> <valeur>")
+                input("\nAppuyez sur Entrée pour continuer...")
                 return
             opt, val = parts
             if opt not in self.config:
                 print("Option inconnue.")
+                input("\nAppuyez sur Entrée pour continuer...")
                 return
             self.config[opt] = val
             print(f"{opt} mis à jour.")
         else:
-            # mode interactif
             opt = input("Nom de l'option à modifier: ").strip()
             if opt not in self.config:
                 print("Option inconnue.")
+                input("\nAppuyez sur Entrée pour continuer...")
                 return
             val = input(f"Nouvelle valeur pour {opt}: ").strip()
             self.config[opt] = val
             print(f"{opt} mis à jour.")
+
+        input("\nAppuyez sur Entrée pour continuer...")
 
     def generate_payload(self):
         if not self.selected_payload:
