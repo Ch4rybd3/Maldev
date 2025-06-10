@@ -1,169 +1,203 @@
-import os
-import sys
-import re
 import yaml
-import questionary
-from jinja2 import Template
+import os
+import platform
+from jinja2 import Environment, FileSystemLoader
+from tabulate import tabulate  # pip install tabulate
 
-TEMPLATE_DIR = "Kelpie/templates/payloads"
-FUNC_DIR = "Kelpie/templates/functionnality"
-DIST_DIR = "Kelpie/malwares/dist"
+class KelpieCLI:
+    def __init__(self):
+        self.payloads = self.load_payloads()
+        self.selected_payload = None
+        self.config = {}
+        print(f"[i] {len(self.payloads)} payload(s) chargés depuis le dossier config.")
 
-def extract_metadata_from_template(path: str) -> dict:
-    with open(path, 'r', encoding='utf-8') as f:
-        content = f.read()
-    match = re.search(r'{#---(.*?)---#}', content, re.DOTALL)
-    if not match:
-        raise ValueError(f"Aucun bloc de métadonnées YAML trouvé dans {path}")
-    yaml_block = match.group(1)
-    metadata = yaml.safe_load(yaml_block)
-    return metadata
-
-def list_payloads():
-    return [f for f in os.listdir(TEMPLATE_DIR) if f.endswith(".j2")]
-
-def list_functionnalities():
-    return [f for f in os.listdir(FUNC_DIR) if f.endswith(".j2")]
-
-def extract_start_function(template_content):
-    match = re.search(r'{%\s*set\s+start\s*=\s*"([^"]+)"\s*%}', template_content)
-    return match.group(1) if match else "main"
-
-def extract_imports(code):
-    """Extrait toutes les lignes d'import pour éviter les doublons"""
-    imports = []
-    other_code = []
-    for line in code.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("import ") or stripped.startswith("from "):
-            if line not in imports:
-                imports.append(line)
+    def clear_console(self):
+        if platform.system() == "Windows":
+            os.system("cls")
         else:
-            other_code.append(line)
-    return imports, other_code
+            os.system("clear")
 
-def main():
-    print("\n🚀 Bienvenue dans Kelpie - Générateur multi-payloads personnalisés\n")
+    def truncate_str(self, s, max_len=30):
+        if len(s) > max_len:
+            return s[:max_len] + "..."
+        return s
 
-    payload_files = list_payloads()
-    if not payload_files:
-        print("Aucun template trouvé dans le dossier templates.")
-        sys.exit(1)
+    def color_text(self, text, color_code):
+        return f"\033[{color_code}m{text}\033[0m"
 
-    selected_payloads = questionary.checkbox(
-        "📦 Choisissez un ou plusieurs payloads à combiner :",
-        choices=payload_files
-    ).ask()
+    def green(self, text):
+        return self.color_text(text, "32")
 
-    if not selected_payloads:
-        print("Aucun payload sélectionné, sortie.")
-        sys.exit(0)
+    def blue(self, text):
+        return self.color_text(text, "34")
 
-    # Liste des fonctionnalités disponibles (ex: killswitch)
-    functionnality_files = list_functionnalities()
-    selected_functionnalities = questionary.checkbox(
-        "⚙️ Choisissez des fonctionnalités à ajouter (optionnel) :",
-        choices=functionnality_files
-    ).ask() or []
+    def print_options_table(self):
+        if not self.selected_payload:
+            print("[Aucun payload sélectionné]")
+            return
+        headers = ["Nom", "Type", "Mandatory", "Description", "Valeur"]
+        rows = []
+        for opt in self.selected_payload["features"]:
+            name = opt.get("name", "")
+            typ = opt.get("type", "")
+            mand = opt.get("mandatory", False)
+            desc = opt.get("description", "")
+            val = self.config.get(name, "")
+            val_trunc = self.truncate_str(str(val), 40)  # Limite à 40 caractères par ex
 
-    all_imports = []
-    all_code_blocks = []
-    start_functions = []
-    output_names = []
+            # Couleur pour mandatory
+            if mand is True:
+                mand_colored = self.green("True")
+            elif mand is False:
+                mand_colored = self.blue("False")
+            else:
+                mand_colored = str(mand)
 
-    # --- Chargement des payloads ---
-    for payload_file in selected_payloads:
-        path = os.path.join(TEMPLATE_DIR, payload_file)
-        metadata = extract_metadata_from_template(path)
-        output_names.append(metadata['name'].lower().replace(" ", "_"))
+            # Couleur pour la valeur modifiée
+            # On récupère la valeur par défaut dans la config du payload
+            default_val = ""
+            for feature in self.selected_payload["features"]:
+                if feature.get("name") == name:
+                    default_val = feature.get("default", "")
+                    break
+            if val != default_val:
+                val_colored = self.green(val_trunc)
+            else:
+                val_colored = val_trunc
 
-        print(f"\n🔍 Chargement du template: {metadata['name']} ({metadata['malware_type']})")
+            rows.append([name, typ, mand_colored, desc, val_colored])
+        print(tabulate(rows, headers=headers, tablefmt="grid"))
 
-        with open(path, encoding='utf-8') as f:
-            template_content = f.read()
 
-        # Extraction variables Jinja2
-        variables = {}
-        keys = set(re.findall(r"{{\s*(\w+)\s*}}", template_content))
-        for key in keys:
-            if key not in variables:
-                response = questionary.text(f"[{metadata['name']}] Entrez une valeur pour '{key}':").ask()
-                variables[key] = response
+    def run(self):
+        while True:
+            self.clear_console()
+            # Affiche tableau options en haut
+            self.print_options_table()
 
-        template = Template(template_content)
-        rendered_code = template.render(**variables)
+            # Affiche prompt avec ou sans payload sélectionné
+            prompt = "[kelpie]"
+            if self.selected_payload:
+                prompt += f" - [{self.selected_payload['name']}]"
+            prompt += " > "
+            
+            cmd = input(prompt).strip()
+            if cmd in ("exit", "quit"):
+                break
+            self.handle_command(cmd)
 
-        # Extraction imports et reste du code
-        imports, code_lines = extract_imports(rendered_code)
+    def handle_command(self, cmd):
+        if cmd == "list":
+            self.list_payloads()
+            input("\nAppuyez sur Entrée pour continuer...")
+        elif cmd.startswith("use "):
+            name = cmd.split(" ", 1)[1]
+            self.select_payload(name)
+        elif cmd == "show options":
+            self.show_options()
+        elif cmd.startswith("set"):
+            args = cmd[3:].strip()
+            self.set_option(args)
+        elif cmd == "generate":
+            self.generate_payload()
+        else:
+            print("Commande inconnue.")
+            input("\nAppuyez sur Entrée pour continuer...")
 
-        # Ajout imports sans doublons
-        for imp in imports:
-            if imp not in all_imports:
-                all_imports.append(imp)
+    def list_payloads(self):
+        print("Payloads disponibles :")
+        for payload in self.payloads:
+            print(f"- {payload['name']} ({payload['malware_type']})")
 
-        # Stockage code (sans imports)
-        all_code_blocks.append("\n".join(code_lines))
+    def select_payload(self, name):
+        for p in self.payloads:
+            if p["name"].lower() == name.lower():
+                self.selected_payload = p
+                self.config = {opt["name"]: opt.get("default", "") for opt in p["features"]}
+                print(f"Payload '{name}' sélectionné.")
+                return
+        print("Payload non trouvé.")
+        input("\nAppuyez sur Entrée pour continuer...")
 
-        # Extraction fonction de démarrage
-        start_func = extract_start_function(template_content)
-        start_functions.append(start_func)
+    def show_options(self):
+        if not self.selected_payload:
+            print("Aucun payload sélectionné.")
+            return
+        print("Options du payload :")
+        for opt in self.selected_payload["features"]:
+            value = self.config.get(opt["name"], "")
+            print(f"{opt['name']} ({opt['type']}): {value}")
 
-    # --- Chargement des fonctionnalités ---
-    killswitch_enabled = False
-    for func_file in selected_functionnalities:
-        path = os.path.join(FUNC_DIR, func_file)
-        metadata = extract_metadata_from_template(path)
+    def set_option(self, args=None):
+        if not self.selected_payload:
+            print("Aucun payload sélectionné.")
+            input("\nAppuyez sur Entrée pour continuer...")
+            return
+        
+        if args:
+            parts = args.split(" ", 1)
+            if len(parts) != 2:
+                print("Usage : set <option> <valeur>")
+                input("\nAppuyez sur Entrée pour continuer...")
+                return
+            opt, val = parts
+            if opt not in self.config:
+                print("Option inconnue.")
+                input("\nAppuyez sur Entrée pour continuer...")
+                return
+            self.config[opt] = val
+            print(f"{opt} mis à jour.")
+        else:
+            opt = input("Nom de l'option à modifier: ").strip()
+            if opt not in self.config:
+                print("Option inconnue.")
+                input("\nAppuyez sur Entrée pour continuer...")
+                return
+            val = input(f"Nouvelle valeur pour {opt}: ").strip()
+            self.config[opt] = val
+            print(f"{opt} mis à jour.")
 
-        print(f"\n🔧 Ajout de la fonctionnalité: {metadata.get('name', func_file)}")
+    def generate_payload(self):
+        if not self.selected_payload:
+            print("Aucun payload sélectionné.")
+            return
 
-        with open(path, encoding='utf-8') as f:
-            func_content = f.read()
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        templates_dir = os.path.join(base_dir, "templates")
+        output_dir = os.path.join(base_dir, "malwares", "source_code")
+        os.makedirs(output_dir, exist_ok=True)
 
-        template = Template(func_content)
-        # Pas de variables pour l’instant dans les fonctionnalités, sinon tu peux les gérer comme pour les payloads
-        rendered_func = template.render()
+        payload_name = self.selected_payload["name"]
+        lang = self.selected_payload.get("lang", "py")
+        template_filename = f"{payload_name}.{lang}.j2"
 
-        # Extraction imports + code
-        imports, code_lines = extract_imports(rendered_func)
+        env = Environment(loader=FileSystemLoader(os.path.join(templates_dir, "base")))
 
-        for imp in imports:
-            if imp not in all_imports:
-                all_imports.append(imp)
+        if not os.path.exists(os.path.join(templates_dir, "base", template_filename)):
+            print(f"Template non trouvé : {template_filename}")
+            return
 
-        all_code_blocks.append("\n".join(code_lines))
+        template = env.get_template(template_filename)
+        rendered_code = template.render(**self.config)
 
-        # Si la fonctionnalité est killswitch, on active le flag
-        if metadata.get('functionnality_type', '').lower() == 'killswitch':
-            killswitch_enabled = True
+        output_path = os.path.join(output_dir, f"{payload_name}.{lang}")
+        with open(output_path, "w") as f:
+            f.write(rendered_code)
 
-    # Construction du code final
-    final_code = "\n".join(all_imports) + "\n\n"
-    final_code += "\n\n".join(all_code_blocks)
+        print(f"Payload généré : {output_path}")
 
-    # Génération main avec killswitch conditionnel
-    main_code = "\n\nif __name__ == '__main__':\n"
-    if killswitch_enabled:
-        main_code += "    import sys\n"
-        main_code += "    if killswitch():\n"
-        main_code += "        sys.exit()\n"
-        main_code += "    else:\n"
-        for func in start_functions:
-            main_code += f"        {func}()\n"
-    else:
-        for func in start_functions:
-            main_code += f"    {func}()\n"
+    def load_payloads(self):
+        payloads = []
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        config_dir = os.path.join(base_dir, "config")
 
-    final_code += main_code
+        for file in os.listdir(config_dir):
+            if file.endswith(".yml") or file.endswith(".yaml"):
+                with open(os.path.join(config_dir, file), "r") as f:
+                    payloads.append(yaml.safe_load(f))
+        return payloads
 
-    # Nom fichier de sortie concaténant tous les noms
-    output_filename = "_".join(output_names) + ".py"
-    output_path = os.path.join(DIST_DIR, output_filename)
-
-    os.makedirs(DIST_DIR, exist_ok=True)
-    with open(output_path, "w", encoding='utf-8') as f:
-        f.write(final_code)
-
-    print(f"\n✅ Payload(s) combiné(s) généré(s) avec succès : {output_path}\n")
 
 if __name__ == "__main__":
-    main()
+    cli = KelpieCLI()
+    cli.run()
