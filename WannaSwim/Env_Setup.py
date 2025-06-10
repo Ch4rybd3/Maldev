@@ -15,7 +15,7 @@ def setup_and_populate_fake_env():
     # Répertoires sources
     source_dir = Path(__file__).parent / "fake_env_template"  # source directory contenant le modèle de l'environnement fictif
     documents_path = Path.home() / "Documents"  # Chemin des documents de l'utilisateur
-    fake_root = documents_path / "CTF-FSA-002_Documents"  # Création du répertoire principal de l'environnement fictif
+    fake_root = documents_path / "fake_env_Documents"  # Création du répertoire principal de l'environnement fictif
     folders = ["Documents", "Downloads", "Images", "Videos", "Desktop", "Music"]  # Dossiers classiques dans un répertoire utilisateur
 
     try:

