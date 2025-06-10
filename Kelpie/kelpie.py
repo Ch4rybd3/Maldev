@@ -65,13 +65,11 @@ class KelpieCLI:
             self.select_payload(name)
         elif cmd == "show options":
             self.show_options()
-            input("\nAppuyez sur Entrée pour continuer...")
         elif cmd.startswith("set"):
             args = cmd[3:].strip()
             self.set_option(args)
         elif cmd == "generate":
             self.generate_payload()
-            input("\nAppuyez sur Entrée pour continuer...")
         else:
             print("Commande inconnue.")
             input("\nAppuyez sur Entrée pour continuer...")
@@ -87,7 +85,6 @@ class KelpieCLI:
                 self.selected_payload = p
                 self.config = {opt["name"]: opt.get("default", "") for opt in p["features"]}
                 print(f"Payload '{name}' sélectionné.")
-                input("\nAppuyez sur Entrée pour continuer...")
                 return
         print("Payload non trouvé.")
         input("\nAppuyez sur Entrée pour continuer...")
@@ -129,8 +126,6 @@ class KelpieCLI:
             val = input(f"Nouvelle valeur pour {opt}: ").strip()
             self.config[opt] = val
             print(f"{opt} mis à jour.")
-
-        input("\nAppuyez sur Entrée pour continuer...")
 
     def generate_payload(self):
         if not self.selected_payload:
