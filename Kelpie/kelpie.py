@@ -22,6 +22,15 @@ class KelpieCLI:
             return s[:max_len] + "..."
         return s
 
+    def color_text(self, text, color_code):
+        return f"\033[{color_code}m{text}\033[0m"
+
+    def green(self, text):
+        return self.color_text(text, "32")
+
+    def blue(self, text):
+        return self.color_text(text, "34")
+
     def print_options_table(self):
         if not self.selected_payload:
             print("[Aucun payload sélectionné]")
@@ -31,11 +40,32 @@ class KelpieCLI:
         for opt in self.selected_payload["features"]:
             name = opt.get("name", "")
             typ = opt.get("type", "")
-            mand = opt.get("mandatory", "")
+            mand = opt.get("mandatory", False)
             desc = opt.get("description", "")
             val = self.config.get(name, "")
-            val = self.truncate_str(str(val), 40)  # Limite à 40 caractères par ex
-            rows.append([name, typ, mand, desc, val])
+            val_trunc = self.truncate_str(str(val), 40)  # Limite à 40 caractères par ex
+
+            # Couleur pour mandatory
+            if mand is True:
+                mand_colored = self.green("True")
+            elif mand is False:
+                mand_colored = self.blue("False")
+            else:
+                mand_colored = str(mand)
+
+            # Couleur pour la valeur modifiée
+            # On récupère la valeur par défaut dans la config du payload
+            default_val = ""
+            for feature in self.selected_payload["features"]:
+                if feature.get("name") == name:
+                    default_val = feature.get("default", "")
+                    break
+            if val != default_val:
+                val_colored = self.green(val_trunc)
+            else:
+                val_colored = val_trunc
+
+            rows.append([name, typ, mand_colored, desc, val_colored])
         print(tabulate(rows, headers=headers, tablefmt="grid"))
 
 
