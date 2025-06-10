@@ -26,15 +26,16 @@ class KelpieCLI:
         if not self.selected_payload:
             print("[Aucun payload sélectionné]")
             return
-        headers = ["Nom", "Type", "Description", "Valeur"]
+        headers = ["Nom", "Type", "Mandatory", "Description", "Valeur"]
         rows = []
         for opt in self.selected_payload["features"]:
             name = opt.get("name", "")
             typ = opt.get("type", "")
+            mand = opt.get("mandatory", "")
             desc = opt.get("description", "")
             val = self.config.get(name, "")
             val = self.truncate_str(str(val), 40)  # Limite à 40 caractères par ex
-            rows.append([name, typ, desc, val])
+            rows.append([name, typ, mand, desc, val])
         print(tabulate(rows, headers=headers, tablefmt="grid"))
 
 
