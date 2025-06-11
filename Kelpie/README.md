@@ -1,0 +1,1 @@
+gcc .\Kelpie\templates\base\kraken.c -o Kelpie\malwares\dist\kraken.exe -lwininet
