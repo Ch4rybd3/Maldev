@@ -107,7 +107,7 @@ class KelpieCLI:
     def list_payloads(self):
         print("Payloads disponibles :")
         for payload in self.payloads:
-            print(f"- {payload['name']} ({payload['malware_type']})")
+            print(f"- {payload['name']} ({payload['malware_type']}) ({payload['lang']})")
 
     def select_payload(self, name):
         for p in self.payloads:

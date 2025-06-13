@@ -1,4 +1,4 @@
-name: "Manta"
+name: "Manta_py"
 lang: "py"
 malware_type: "Infostealer"
 description: "A basic infostealer that exfiltrate data regarding the OS, network configuration, ..."

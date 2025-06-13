@@ -1,4 +1,4 @@
-name: "Swordfish"
+name: "Swordfish_py"
 lang: "py"
 malware_type: "Backdoor"
 description: "A simple backdoor, it is made to work with Scylla as a 2 way C2, having Scylla waiting for queries based on the malware_key, and if one match, it send a response with one or multiple commands inside, Swordfish then execute the command(s) and send the output to the C2, giving capabilities to Scylla, like an extended arm in the victim system"
