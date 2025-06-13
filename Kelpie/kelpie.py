@@ -100,6 +100,7 @@ class KelpieCLI:
             self.set_option(args)
         elif cmd == "generate":
             self.generate_payload()
+            input("\nAppuyez sur Entrée pour continuer...")
         else:
             print("Commande inconnue.")
             input("\nAppuyez sur Entrée pour continuer...")
@@ -107,7 +108,7 @@ class KelpieCLI:
     def list_payloads(self):
         print("Payloads disponibles :")
         for payload in self.payloads:
-            print(f"- {payload['name']} ({payload['malware_type']})")
+            print(f"- {payload['name']} ({payload['malware_type']}) ({payload['lang']})")
 
     def select_payload(self, name):
         for p in self.payloads:
@@ -159,32 +160,50 @@ class KelpieCLI:
 
     def generate_payload(self):
         if not self.selected_payload:
-            print("Aucun payload sélectionné.")
+            print("[ERREUR] Aucun payload sélectionné.")
             return
+
+        print(f"[DEBUG] Payload sélectionné : {self.selected_payload['name']}")
 
         base_dir = os.path.dirname(os.path.abspath(__file__))
         templates_dir = os.path.join(base_dir, "templates")
         output_dir = os.path.join(base_dir, "malwares", "source_code")
         os.makedirs(output_dir, exist_ok=True)
 
+        print(f"[DEBUG] Répertoire base : {base_dir}")
+        print(f"[DEBUG] Répertoire des templates : {templates_dir}")
+        print(f"[DEBUG] Répertoire de sortie : {output_dir}")
+
         payload_name = self.selected_payload["name"]
         lang = self.selected_payload.get("lang", "py")
-        template_filename = f"{payload_name}.{lang}.j2"
+        template_filename = f"{payload_name}.j2"
+        template_path = os.path.join(templates_dir, "base", template_filename)
+
+        print(f"[DEBUG] Nom du template attendu : {template_filename}")
+        print(f"[DEBUG] Chemin complet du template : {template_path}")
 
         env = Environment(loader=FileSystemLoader(os.path.join(templates_dir, "base")))
 
-        if not os.path.exists(os.path.join(templates_dir, "base", template_filename)):
-            print(f"Template non trouvé : {template_filename}")
+        if not os.path.exists(template_path):
+            print(f"[ERREUR] Template non trouvé : {template_filename}")
             return
 
-        template = env.get_template(template_filename)
-        rendered_code = template.render(**self.config)
+        try:
+            print("[INFO] Rendu du template en cours...")
+            template = env.get_template(template_filename)
+            rendered_code = template.render(**self.config)
+        except Exception as e:
+            print(f"[ERREUR] Échec du rendu du template : {e}")
+            return
 
         output_path = os.path.join(output_dir, f"{payload_name}.{lang}")
-        with open(output_path, "w") as f:
-            f.write(rendered_code)
+        try:
+            with open(output_path, "w") as f:
+                f.write(rendered_code)
+            print(f"[SUCCÈS] Payload généré : {output_path}")
+        except Exception as e:
+            print(f"[ERREUR] Écriture du fichier échouée : {e}")
 
-        print(f"Payload généré : {output_path}")
 
     def load_payloads(self):
         payloads = []
